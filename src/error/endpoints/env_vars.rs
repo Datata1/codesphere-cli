@@ -19,4 +19,7 @@ pub enum EnvVarsError {
 
     #[error("API error: {status_code} - {message}")]
     ApiError { status_code: u16, message: String },
+
+    #[error("No API key found. Please provide via --api-key, $CODESPHERE_API_KEY environment variable, or .env file")]
+    MissingApiKey,
 }

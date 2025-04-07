@@ -16,12 +16,12 @@ pub enum Commands {
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct SetEnvVarsArgs {
-    #[arg(short = 'e', long = "env-file")]
+    #[arg(short = 'e', long = "env-file", default_value = ".env")]
     pub env_file: std::path::PathBuf,
 
-    #[arg(short = 'k', long = "api-key")]
-    pub api_key: String,
+    #[arg(short = 'k', long = "api-key", required = false)]
+    pub api_key: Option<String>,
 
-    #[arg(short = 'w', long = "workspace-id")]
+    #[arg(short = 'w', long = "workspace-id", required = false)]
     pub workspace_id: Option<String>,
 }
