@@ -2,33 +2,28 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     rust-overlay.url = "github:oxalica/rust-overlay";
+    flake-utils.url = "github:numtide/flake-utils"; 
   };
 
-  outputs = { self, nixpkgs, rust-overlay, ... }:
-    let
-      # Unterstützte Systeme definieren
-      supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
-
-      # Helfer-Funktion zur Generierung der Outputs für alle Systeme
-      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
-
-      # Pkgs für jedes System
-      nixpkgsFor = forAllSystems (system:
-        import nixpkgs {
+  outputs = { self, nixpkgs, rust-overlay, flake-utils, ... }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = import nixpkgs {
           inherit system;
           overlays = [ rust-overlay.overlays.default ];
-        }
-      );
-    in {
-      packages = forAllSystems (system:
-        let
-          pkgs = nixpkgsFor.${system};
-        in {
-          default = pkgs.rustPlatform.buildRustPackage {
-            pname = "codesphere-cli";  # Name deines Projekts
-            version = "0.1.0";         # Version deines Projekts
+        };
 
-            src = ./.;
+        rustToolchain = pkgs.rust-bin.stable.latest.default.override {
+          extensions = [ "rust-src" ]; 
+        };
+
+      in {
+        packages = {
+          default = pkgs.rustPlatform.buildRustPackage {
+            pname = "codesphere-cli";  
+            version = "0.1.0";        
+
+            src = ./.; 
 
             cargoLock = {
               lockFile = ./Cargo.lock;
@@ -36,7 +31,6 @@
 
             nativeBuildInputs = with pkgs; [
               pkg-config
-              openssl
             ];
 
             buildInputs = with pkgs; [
@@ -45,31 +39,36 @@
 
             meta = with pkgs.lib; {
               description = "CLI tool for managing Codesphere environment variables";
-              homepage = "https://github.com/yourusername/codesphere-cli";  # Dein Repository
-              license = licenses.mit;  # Oder deine gewählte Lizenz
-              maintainers = with maintainers; [ "yourgithubusername" ];
-              platforms = platforms.all;
+              homepage = "https://github.com/Datata1/codesphere-cli"; 
+              license = licenses.mit;  
+              maintainers = with maintainers; [ "yourgithubusername" ]; 
             };
           };
-        }
-      );
+        };
 
-      # Development shell
-      devShells = forAllSystems (system:
-        let
-          pkgs = nixpkgsFor.${system};
-        in {
+        devShells = {
           default = pkgs.mkShell {
-            inputsFrom = [ self.packages.${system}.default ];
             nativeBuildInputs = with pkgs; [
+              rustToolchain
               rust-analyzer
-              rustc
-              cargo
               pkg-config
               openssl
             ];
+
+            RUST_SRC_PATH = "${rustToolchain}/lib/rustlib/src/rust/library";
+
+            # CARGO_HOME = "${pkgs.buildDir}/cargo"; # Optional: Cargo Cache in temporärem Verzeichnis
+            # RUSTFLAGS = "-D warnings"; # Optional: Warnungen als Fehler behandeln
           };
-        }
-      );
-    };
+        };
+
+        apps = {
+          default = {
+            type = "app";
+            program = "${self.packages.${system}.default}/bin/codesphere-cli"; 
+          };
+        };
+
+      }
+    );
 }
